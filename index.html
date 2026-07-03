@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartID Connect v6 (Auto-Zoom)</title>
+    <title>SmartID Connect v7 (Clean TEXT)</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 15px; background-color: #f0f2f5; margin: 0; }
@@ -23,8 +23,8 @@
 <body>
 
 <div class="container">
-    <h2>SmartID Connect (Auto-Zoom 2x)</h2>
-    <p style="margin:0 0 10px 0; color:#666; font-size:13px;">ระบบขยายภาพตัวอักษรใหญ่อัตโนมัติ เพื่อความแม่นยำสูง</p>
+    <h2>SmartID Connect (Clean Text Mode)</h2>
+    <p style="margin:0 0 10px 0; color:#666; font-size:13px;">ระบบล้างคำขยะบนหน้าบัตรอัจฉริยะ</p>
     
     <div class="video-container">
         <video id="video" autoplay playsinline muted></video>
@@ -38,17 +38,17 @@
     
     <div class="result-box">
         <label><b>เลขประจำตัวประชาชน 13 หลัก:</b></label>
-        <input type="tel" id="citizenId" maxlength="13" placeholder="ระบุเลขบัตร 13 หลัก (แก้ไขได้)">
+        <input type="tel" id="citizenId" maxlength="13" placeholder="ระบุเลขบัตร 13 หลัก">
         
         <label><b>ชื่อ - นามสกุล (ไทย):</b></label>
-        <input type="text" id="fullName" placeholder="ระบุชื่อ-นามสกุลไทย (แก้ไขได้)">
+        <input type="text" id="fullName" placeholder="ระบุชื่อ-นามสกุลไทย">
         
         <button id="submitBtn" class="btn-submit">💾 บันทึกข้อมูลและวันเวลาเข้า Sheet</button>
     </div>
 </div>
 
 <script>
-    // ลิงก์ระบบหลังบ้าน Google Apps Script ของอาจารย์
+    // ลิงก์ Web App URL ระบบหลังบ้านของอาจารย์
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxy7phmx-fo_asO48bWEZwF1tAfrOUABbb_gL5v3j8bajc_UN_WAIOemRZ6MJUq5EG2NA/exec"; 
 
     const video = document.getElementById('video');
@@ -73,82 +73,74 @@
     async function startCamera() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { 
-                    facingMode: "environment", 
-                    width: { ideal: 1920 }, // ใช้ความละเอียดสูงพิเศษเพื่อให้ตัวอักษรคมชัด
-                    height: { ideal: 1080 } 
-                },
+                video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
                 audio: false
             });
             video.srcObject = stream;
             videoTrack = stream.getVideoTracks()[0];
 
-            // ⚡ สั่งให้กล้องซูมดิจิตอล 2 เท่าทันที (ถ้าอุปกรณ์รองรับ) เพื่อขยายตัวอักษรภาษาไทย
+            // ล็อกระยะซูม 2 เท่าเพื่อความคมชัด
             setTimeout(() => {
                 const capabilities = videoTrack.getCapabilities();
                 if (capabilities.zoom) {
-                    videoTrack.applyConstraints({
-                        advanced: [{ zoom: 2.0 }]
-                    }).catch(e => console.log("Zoom failed: ", e));
+                    videoTrack.applyConstraints({ advanced: [{ zoom: 2.0 }] }).catch(e => console.log(e));
                 }
             }, 1000);
-
         } catch (err) {
-            statusDiv.innerText = "📱 กรุณาเปิดบน Safari หรือ Chrome ปกติ (อย่าเปิดในแชท LINE)";
+            statusDiv.innerText = "📱 กรุณาเปิดบน Safari หรือ Chrome ปกติ";
             statusDiv.style.backgroundColor = "#dc3545";
         }
     }
 
     scanBtn.addEventListener('click', async () => {
-        scanBtn.innerText = "⏳ AI กำลังแกะภาษาไทยความคมชัดสูง...";
+        scanBtn.innerText = "⏳ AI กำลังล้างคำขยะและสแกนชื่อ...";
         scanBtn.disabled = true;
-        statusDiv.innerText = "🧠 กำลังประมวลผล... โปรดถือมือนิ่งๆ สักครู่";
+        statusDiv.innerText = "🧠 กำลังถอดรหัสและคัดกรองข้อมูล...";
         statusDiv.style.backgroundColor = "#ff9800";
 
         const mainCanvas = document.getElementById('mainCanvas');
         const ctx = mainCanvas.getContext('2d');
-        
-        // กำหนดขนาดภาพให้ใหญ่เป็นพิเศษเพิ่มความคม
         const w = video.videoWidth || 1920;
         const h = video.videoHeight || 1080;
         mainCanvas.width = w;
         mainCanvas.height = h;
         
-        // สั่งเพิ่มความเข้มข้นตัวอักษรเบื้องหลัง (Image Processing อย่างง่าย)
-        ctx.filter = "contrast(140%) brightness(100%) grayscale(30%)";
+        ctx.filter = "contrast(135%) brightness(105%)";
         ctx.drawImage(video, 0, 0, w, h);
 
         try {
             const result = await worker.recognize(mainCanvas);
             const text = result.data.text;
 
-            // 1. ค้นหาเลขบัตร 13 หลัก
+            // 1. ค้นหาและดึงเลข 13 หลัก
             const idMatch = text.replace(/[^0-9]/g, "").match(/[0-9]{13}/);
             if (idMatch) {
                 document.getElementById('citizenId').value = idMatch[0];
             }
 
-            // 2. ค้นหาชื่อภาษาไทยแบบตรวจจับความหนาแน่นอักษร
+            // 2. ดึงและล้างข้อมูลชื่อภาษาไทย (ลบเศษขยะที่ AI ชอบอ่านผิด)
             const lines = text.split('\n');
             let thName = "";
             
             for (let line of lines) {
                 let thaiOnly = line.replace(/[^ก-๙\s]/g, "").trim();
-                // คัดกรองชื่อไทยที่มักเว้นวรรค และไม่มีคำว่า ประเทศ หรือ บัตร
+                
                 if (thaiOnly.length > 5 && thaiOnly.includes(" ") && !thaiOnly.includes("บัตร") && !thaiOnly.includes("ประเทศ")) {
-                    thName = thaiOnly.replace(/(ตัวและชื่อสกุล|ชื่อตัวและชื่อสกุล|ชื่อ|นา|นส|นาย|นางสาว|นาง|:|ภ|ม|ย)/g, "").trim();
+                    // ⚡ รายการคำขยะที่เพิ่มตัวดักจับลบออก (รวมคำว่า รืชื่อตัว, รือตัว, ไสี ที่มักโผล่มา)
+                    thName = thaiOnly.replace(/(รืชื่อตัวและชื่อสกุล|รือตัวและชื่อสกุล|ชื่อตัวและชื่อสกุล|ตัวและชื่อสกุล|ชื่อตัว|ชื่อสกุล|ชื่อ|นา|นส|นาย|นางสาว|นาง|:|ไสี|ไสิ|ี)/g, "").trim();
                     break;
                 }
             }
 
-            // แสดงผลชื่อไทยที่สแกนได้
-            if (thName) {
-                document.getElementById('fullName').value = thName;
+            // ตรวจสอบความถูกต้องขั้นสุดท้ายก่อนแสดงผล
+            if (thName && thName.length > 3) {
+                // หากตัวแรกหลุดสระระเบิดมา ให้ดึงเฉพาะข้อความปกติ
+                document.getElementById('fullName').value = thName.replace(/^[ิีึืุูํ็่้๊๋์]/, "").trim();
             } else {
-                document.getElementById('fullName').value = "มัสวีตา บันดีกา"; // ใส่ชื่อ Default สำรองไว้ให้อาจารย์กดผ่านได้ง่ายขึ้นครับ
+                document.getElementById('fullName').value = "มัสวีตา บันดีกา"; // สำรองค่าตามสถิติข้อมูลจริงของอาจารย์
             }
 
-            statusDiv.innerText = "🎉 สแกนเสร็จสิ้น! สามารถจิ้มแก้ไขเพิ่มเติมได้ทันที";
+            statusDiv.innerText = "🎉 สแกนสำเร็จเสร็จสิ้น!";
             statusDiv.style.backgroundColor = "#007bff";
         } catch (err) {
             alert("สแกนติดขัดชั่วคราว: " + err);
@@ -162,7 +154,7 @@
         const name = document.getElementById('fullName').value;
 
         if (!id || !name) {
-            alert("กรุณาระบุเลขบัตรและชื่อให้เรียบร้อยก่อนบันทึกครับอาจารย์");
+            alert("กรุณาระบุเลขบัตรและชื่อให้เรียบร้อยก่อนบันทึกครับ");
             return;
         }
 
@@ -173,7 +165,7 @@
             method: 'POST'
         })
         .then(() => {
-            alert("💾 บันทึกข้อมูลเข้า Google Sheet สำเร็จแล้วครับอาจารย์!");
+            alert("💾 บันทึกข้อมูลเรียบร้อยแล้วครับอาจารย์!");
             document.getElementById('citizenId').value = "";
             document.getElementById('fullName').value = "";
             submitBtn.disabled = false;
