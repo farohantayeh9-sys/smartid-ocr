@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartID Connect v4</title>
+    <title>SmartID Connect v5</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 15px; background-color: #f0f2f5; margin: 0; }
@@ -24,7 +24,7 @@
 
 <div class="container">
     <h2>SmartID Connect (GitHub Mode)</h2>
-    <p style="margin:0 0 10px 0; color:#666; font-size:13px;">สแกนผ่านกล้องแท้ดึงข้อมูล หรือแก้ไขเพิ่มเติมได้อิสระ</p>
+    <p style="margin:0 0 10px 0; color:#666; font-size:13px;">ปรับปรุงระบบดึงชื่อภาษาไทยดักจับทุกตัวอักษร</p>
     
     <div class="video-container">
         <video id="video" autoplay playsinline muted></video>
@@ -48,7 +48,7 @@
 </div>
 
 <script>
-    // ⚠️ อาจารย์เอาลิงก์ Web App URL ตัวใหม่จาก Google Apps Script มาวางแทนที่ตรงนี้ครับ!
+    // ลิงก์ระบบหลังบ้านของอาจารย์
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxy7phmx-fo_asO48bWEZwF1tAfrOUABbb_gL5v3j8bajc_UN_WAIOemRZ6MJUq5EG2NA/exec"; 
 
     const video = document.getElementById('video');
@@ -59,7 +59,6 @@
 
     async function initOCR() {
         try {
-            statusDiv.innerText = "⏳ โดนโหลดสมองกลภาษาไทย (ใช้เวลาประมาณ 5-10 วินาที)...";
             worker = await Tesseract.createWorker(['tha', 'eng']);
             statusDiv.innerText = "🔍 ระบบพร้อมใช้งาน! เล็งบัตรในกรอบแล้วกดสแกน";
             statusDiv.style.backgroundColor = "#28a745";
@@ -78,7 +77,7 @@
             });
             video.srcObject = stream;
         } catch (err) {
-            statusDiv.innerText = "📱 กรุณาเปิดลิงก์นี้บน Safari หรือ Chrome ปกติ (อย่าเปิดในแชท LINE)";
+            statusDiv.innerText = "📱 กรุณาเปิดลิงก์นี้บน Safari หรือ Chrome (ห้ามเปิดในแอป LINE)";
             statusDiv.style.backgroundColor = "#dc3545";
         }
     }
@@ -98,18 +97,32 @@
         try {
             const result = await worker.recognize(mainCanvas);
             const text = result.data.text;
+            console.log("ข้อความที่ AI อ่านได้ทั้งหมด:", text);
 
-            // ค้นหาเลข 13 หลัก
-            const idMatch = text.match(/[0-9]{13}/) || text.replace(/[^0-9]/g, "").match(/[0-9]{13}/);
+            // 1. ค้นหาเลขบัตร 13 หลัก
+            const idMatch = text.replace(/[^0-9]/g, "").match(/[0-9]{13}/);
             if (idMatch) {
                 document.getElementById('citizenId').value = idMatch[0];
             }
 
-            // ค้นหาชื่อภาษาไทย
-            const nameMatch = text.match(/(นาย|นาง|นางสาว|ชื่อ|Name)\s*([ก-์]+\s+[ก-์]+)/);
-            if (nameMatch) {
-                document.getElementById('fullName').value = nameMatch[0].replace(/(ชื่อ|Name|:)/g, "").trim();
+            // 2. ปรับปรุงโหมดดึงชื่อภาษาไทย: ค้นหาข้อความที่เป็นภาษาไทยยาวติดต่อกัน (รวมเว้นวรรคชื่อนามสกุล)
+            // คัดเอาเฉพาะบรรทัดที่มีอักษรไทย และตัดคำว่า "บัตรประจำตัวประชาชน" ออก
+            const lines = text.split('\n');
+            let thName = "";
+            
+            for (let line of lines) {
+                // กรองเอาเฉพาะตัวอักษรไทยและช่องว่าง
+                let thaiOnly = line.replace(/[^ก-๙\s]/g, "").trim();
+                // ค้นหาบรรทัดที่มีชื่อนามสกุล (มักมีความยาวและมีช่องว่างตรงกลาง)
+                if (thaiOnly.length > 5 && thaiOnly.includes(" ") && !thaiOnly.includes("บัตรประจำตัว") && !thaiOnly.includes("ประเทศไทย")) {
+                    // ลบคำขยะที่ระบบชอบอ่านผิดแถวๆ หัวบัตรออก
+                    thName = thaiOnly.replace(/(ตัวและชื่อสกุล|ชื่อตัวและชื่อสกุล|ชื่อ|นา|นส|นาย|นางสาว|นาง)/g, "").trim();
+                    break;
+                }
             }
+
+            // แสดงผลชื่อที่ดึงได้ (ถ้าดึงไม่ได้เลย จะใส่ค่าว่างไว้เพื่อให้อาจารย์พิมพ์เติมได้สะดวกครับ)
+            document.getElementById('fullName').value = thName;
 
             statusDiv.innerText = "🎉 สแกนเสร็จสิ้น! สามารถตรวจสอบ/พิมพ์แก้ไขเพิ่มได้";
             statusDiv.style.backgroundColor = "#007bff";
@@ -136,7 +149,7 @@
             method: 'POST'
         })
         .then(() => {
-            alert("💾 บันทึกข้อมูล [ วันที่ | เวลา | เลขบัตร | ชื่อ ] เข้า Google Sheet เรียบร้อยแล้วครับ!");
+            alert("💾 บันทึกข้อมูลสำเร็จ! เลขบัตร, ชื่อ, วันที่ และเวลา เข้า Google Sheet แล้วครับ");
             document.getElementById('citizenId').value = "";
             document.getElementById('fullName').value = "";
             submitBtn.disabled = false;
@@ -150,5 +163,7 @@
     window.addEventListener('load', initOCR);
 </script>
 
+</body>
+</html>
 </body>
 </html>
