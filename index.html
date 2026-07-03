@@ -3,182 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartID Connect - Fixed Dual-Zone</title>
+    <title>SmartID Connect v4</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 15px; background-color: #f0f2f5; margin: 0; }
         .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); box-sizing: border-box; }
-        .video-container { position: relative; width: 100%; height: 280px; background: #000; border-radius: 8px; overflow: hidden; }
+        .video-container { position: relative; width: 100%; height: 260px; background: #000; border-radius: 8px; overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
-        
-        /* กรอบเล็งบัตรประชาชน */
         .card-outline { position: absolute; top: 10%; left: 5%; width: 90%; height: 80%; border: 3px dashed #28a745; border-radius: 12px; pointer-events: none; box-sizing: border-box; }
-        
-        /* เพิ่มขนาดและปรับพิกัดกรอบเล็งบนหน้าจอให้สัมพันธ์กับกล้องหลัง */
-        .zone-id { position: absolute; top: 20%; left: 8%; width: 55%; height: 16%; border: 2px solid #ff3b30; background: rgba(255,59,48,0.1); font-size: 11px; color: #ff3b30; border-radius: 4px; pointer-events: none; font-weight: bold; }
-        .zone-name { position: absolute; top: 38%; left: 25%; width: 65%; height: 18%; border: 2px solid #007bff; background: rgba(0,123,255,0.1); font-size: 11px; color: #007bff; border-radius: 4px; pointer-events: none; font-weight: bold; }
-
         .status-badge { background-color: #ff9800; color: white; padding: 10px; border-radius: 5px; font-weight: bold; margin: 10px 0; font-size: 14px; }
-        input { width: 100%; padding: 10px; margin: 5px 0 15px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        input { width: 100%; padding: 12px; margin: 5px 0 15px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; background-color: #fff; }
         button { color: white; border: none; padding: 14px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 5px; }
-        .btn-scan { background-color: #28a745; width: 100%; font-size: 18px; padding: 16px; }
-        .btn-submit { background-color: #007bff; width: 100%; }
-        button:disabled { background-color: #ccc; color: #666; cursor: not-allowed; }
+        .btn-scan { background-color: #28a745; font-size: 18px; padding: 16px; }
+        .btn-submit { background-color: #007bff; }
+        button:disabled { background-color: #ccc; color: #666; }
         .result-box { text-align: left; margin-top: 15px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>SmartID Connect (Dual-Zone v3)</h2>
-    <p style="margin:0 0 10px 0; color:#666; font-size:13px;">ปรับปรุงพิกัดกล้องและเพิ่มความคมชัดตัวอักษรสำหรับ iPhone</p>
+    <h2>SmartID Connect (GitHub Mode)</h2>
+    <p style="margin:0 0 10px 0; color:#666; font-size:13px;">สแกนผ่านกล้องแท้ดึงข้อมูล หรือแก้ไขเพิ่มเติมได้อิสระ</p>
     
     <div class="video-container">
         <video id="video" autoplay playsinline muted></video>
         <div class="card-outline"></div>
-        <div class="zone-id">เลข 13 หลัก</div>
-        <div class="zone-name">ชื่อภาษาไทย</div>
     </div>
     
-    <div id="status" class="status-badge">⏳ กำลังเตรียมระบบระบบสมองกลภาษาไทย...</div>
-    <button id="scanBtn" class="btn-scan" disabled>📷 กดปุ่มนี้เพื่อสแกนบัตรประชาชน</button>
+    <div id="status" class="status-badge">⏳ กำลังสตาร์ทระบบ AI ภาษาไทย...</div>
+    <button id="scanBtn" class="btn-scan" disabled>📷 ถ่ายรูปและสแกนบัตรประชาชน</button>
     
-    <canvas id="canvasId" style="display:none;"></canvas>
-    <canvas id="canvasName" style="display:none;"></canvas>
     <canvas id="mainCanvas" style="display:none;"></canvas>
     
     <div class="result-box">
         <label><b>เลขประจำตัวประชาชน 13 หลัก:</b></label>
-        <input type="text" id="citizenId" placeholder="กรุณากดปุ่มสแกนบัตร...">
+        <input type="tel" id="citizenId" maxlength="13" placeholder="ระบุเลขบัตร 13 หลัก (พิมพ์เองได้)">
         
         <label><b>ชื่อ - นามสกุล (ไทย):</b></label>
-        <input type="text" id="fullName" placeholder="กรุณากดปุ่มสแกนบัตร...">
+        <input type="text" id="fullName" placeholder="ระบุชื่อ-นามสกุลไทย (พิมพ์เองได้)">
         
-        <button id="submitBtn" class="btn-submit" disabled>💾 บันทึกข้อมูลเข้า Google Sheet</button>
+        <button id="submitBtn" class="btn-submit">💾 บันทึกข้อมูลและวันเวลาเข้า Sheet</button>
     </div>
 </div>
 
 <script>
-    // ดึงลิงก์หลังบ้านจากภาพโปรเจกต์ของอาจารย์
+    // ⚠️ อาจารย์เอาลิงก์ Web App URL ตัวใหม่จาก Google Apps Script มาวางแทนที่ตรงนี้ครับ!
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxy7phmx-fo_asO48bWEZwF1tAfrOUABbb_gL5v3j8bajc_UN_WAIOemRZ6MJUq5EG2NA/exec"; 
 
     const video = document.getElementById('video');
     const scanBtn = document.getElementById('scanBtn');
     const submitBtn = document.getElementById('submitBtn');
     const statusDiv = document.getElementById('status');
-    
     let worker = null;
 
     async function initOCR() {
         try {
+            statusDiv.innerText = "⏳ โดนโหลดสมองกลภาษาไทย (ใช้เวลาประมาณ 5-10 วินาที)...";
             worker = await Tesseract.createWorker(['tha', 'eng']);
-            statusDiv.innerText = "🔍 พร้อมใช้งาน! วางบัตรให้ตรงกรอบเล็งแล้วกดสแกน";
+            statusDiv.innerText = "🔍 ระบบพร้อมใช้งาน! เล็งบัตรในกรอบแล้วกดสแกน";
             statusDiv.style.backgroundColor = "#28a745";
             scanBtn.disabled = false;
             startCamera();
         } catch (e) {
-            statusDiv.innerText = "โหลด AI ล้มเหลว: " + e;
+            statusDiv.innerText = "เปิดระบบล้มเหลว: " + e;
         }
     }
 
     async function startCamera() {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: "environment" }, width: 1280, height: 720 },
-            audio: false
-        });
-        video.srcObject = stream;
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+                audio: false
+            });
+            video.srcObject = stream;
+        } catch (err) {
+            statusDiv.innerText = "📱 กรุณาเปิดลิงก์นี้บน Safari หรือ Chrome ปกติ (อย่าเปิดในแชท LINE)";
+            statusDiv.style.backgroundColor = "#dc3545";
+        }
     }
 
     scanBtn.addEventListener('click', async () => {
-        scanBtn.innerText = "⏳ กำลังถอดรหัสภาพความแม่นยำสูง...";
+        scanBtn.innerText = "⏳ AI กำลังแกะตัวอักษรและตัวเลข...";
         scanBtn.disabled = true;
-        statusDiv.innerText = "🧠 AI กำลังถอดรหัสภาพ โปรดถือมือนิ่งๆ...";
+        statusDiv.innerText = "🧠 กำลังประมวลผลภาพถ่าย ถือบัตรนิ่งๆ สักครู่...";
         statusDiv.style.backgroundColor = "#ff9800";
 
         const mainCanvas = document.getElementById('mainCanvas');
         const ctx = mainCanvas.getContext('2d');
-        const w = video.videoWidth || 1280;
-        const h = video.videoHeight || 720;
-        mainCanvas.width = w;
-        mainCanvas.height = h;
-        ctx.drawImage(video, 0, 0, w, h);
-
-        // ปรับแก้สัดส่วนการดึงภาพนิ่งเบื้องหลังให้กว้างเผื่อขอบหลุดโฟกัส
-        const canvasId = document.getElementById('canvasId');
-        const idW = w * 0.65; const idH = h * 0.22;
-        canvasId.width = idW; canvasId.height = idH;
-        canvasId.getContext('2d').drawImage(mainCanvas, w * 0.05, h * 0.15, idW, idH, 0, 0, idW, idH);
-
-        const canvasName = document.getElementById('canvasName');
-        const nameW = w * 0.70; const nameH = h * 0.25;
-        canvasName.width = nameW; canvasName.height = nameH;
-        canvasName.getContext('2d').drawImage(mainCanvas, w * 0.22, h * 0.35, nameW, nameH, 0, 0, nameW, nameH);
+        mainCanvas.width = video.videoWidth || 1280;
+        mainCanvas.height = video.videoHeight || 720;
+        ctx.drawImage(video, 0, 0, mainCanvas.width, mainCanvas.height);
 
         try {
-            // สแกนโซนตัวเลข
-            const resultId = await worker.recognize(canvasId);
-            const cleanedId = resultId.data.text.replace(/[^0-9]/g, "");
-            
-            // สแกนโซนชื่อ
-            const resultName = await worker.recognize(canvasName);
-            let rawName = resultName.data.text.trim();
-            
-            // ใช้ regex กรองเฉพาะภาษาไทย และลบคำสั่งระบบหรือสัญลักษณ์ขยะออก
-            let cleanedName = rawName.replace(/[A-Za-z0-9]/g, "").trim();
-            cleanedName = cleanedName.replace(/(ชื่อ|Name|นาย|นางสาว|นาง|:|ภ|ม|ย|์|ตรประจำตัวประชาชน|เลขประจำตัวประชาชน)/g, "").trim();
-            // เก็บเฉพาะตัวอักษรไทยยาวต่อเนื่องกัน
-            const finalNameMatch = cleanedName.match(/[ก-์]{2,}\s+[ก-์]{2,}/);
-            const finalName = finalNameMatch ? finalNameMatch[0] : cleanedName;
+            const result = await worker.recognize(mainCanvas);
+            const text = result.data.text;
 
-            // คัดกรองตัวเลข 13 หลัก
-            const finalIdMatch = cleanedId.match(/[0-9]{13}/) || cleanedId.match(/[0-9]{12,14}/);
-
-            if (finalIdMatch) {
-                document.getElementById('citizenId').value = finalIdMatch[0].substring(0, 13);
-                document.getElementById('fullName').value = finalName || "มัสวีตา บันดีกา"; // ถ้าแกะชื่อไทยตกหล่น ให้ Default รองรับไว้ก่อนครับ
-                statusDiv.innerText = "🎉 สแกนสำเร็จเสร็จสิ้น!";
-                statusDiv.style.backgroundColor = "#007bff";
-                submitBtn.disabled = false;
-            } else {
-                // หากดึงเลข 13 หลักผ่าน regex ไม่เจอแบบตรงตัว ให้ดึงแบบนับจำนวนตัวเลขที่แกะได้มาแสดงแทนเพื่อให้อาจารย์แก้ไขต่อได้ง่ายขึ้น
-                if(cleanedId.length >= 10) {
-                     document.getElementById('citizenId').value = cleanedId.substring(0, 13);
-                     document.getElementById('fullName').value = finalName || "มัสวีตา บันดีกา";
-                     statusDiv.innerText = "🎉 ดึงข้อมูลสำเร็จ! โปรดตรวจทาน";
-                     statusDiv.style.backgroundColor = "#007bff";
-                     submitBtn.disabled = false;
-                } else {
-                     alert("AI ค้นหาตำแหน่งเลขบัตรไม่พบชั่วคราว กรุณาเล็งให้ตรงกรอบและเลี่ยงแสงสะท้อนเงาบนบัตร แล้วกดสแกนใหม่อีกครั้งครับ");
-                     statusDiv.innerText = "🔍 พร้อมสแกนใหม่อีกครั้ง";
-                     statusDiv.style.backgroundColor = "#28a745";
-                }
+            // ค้นหาเลข 13 หลัก
+            const idMatch = text.match(/[0-9]{13}/) || text.replace(/[^0-9]/g, "").match(/[0-9]{13}/);
+            if (idMatch) {
+                document.getElementById('citizenId').value = idMatch[0];
             }
+
+            // ค้นหาชื่อภาษาไทย
+            const nameMatch = text.match(/(นาย|นาง|นางสาว|ชื่อ|Name)\s*([ก-์]+\s+[ก-์]+)/);
+            if (nameMatch) {
+                document.getElementById('fullName').value = nameMatch[0].replace(/(ชื่อ|Name|:)/g, "").trim();
+            }
+
+            statusDiv.innerText = "🎉 สแกนเสร็จสิ้น! สามารถตรวจสอบ/พิมพ์แก้ไขเพิ่มได้";
+            statusDiv.style.backgroundColor = "#007bff";
         } catch (err) {
-            alert("เกิดข้อผิดพลาด: " + err);
+            alert("สแกนติดขัดชั่วคราว: " + err);
         }
-        
-        scanBtn.innerText = "📷 กดปุ่มนี้เพื่อสแกนบัตรประชาชน";
+        scanBtn.innerText = "📷 ถ่ายรูปและสแกนบัตรประชาชน";
         scanBtn.disabled = false;
     });
 
     submitBtn.addEventListener('click', () => {
-        submitBtn.innerText = "⏳ กำลังบันทึกลง Sheet...";
-        submitBtn.disabled = true;
-        
         const id = document.getElementById('citizenId').value;
         const name = document.getElementById('fullName').value;
 
+        if (!id || !name) {
+            alert("กรุณาระบุเลขบัตรและชื่อให้เรียบร้อยก่อนบันทึกครับอาจารย์");
+            return;
+        }
+
+        submitBtn.innerText = "⏳ กำลังส่งข้อมูลเข้า Google Sheet...";
+        submitBtn.disabled = true;
+        
         fetch(`${WEB_APP_URL}?citizenId=${encodeURIComponent(id)}&fullName=${encodeURIComponent(name)}`, {
             method: 'POST'
         })
-        .then(res => {
-            alert("💾 บันทึกข้อมูลสำเร็จ! วันที่และเวลาเข้า Google Sheet แล้วครับ");
+        .then(() => {
+            alert("💾 บันทึกข้อมูล [ วันที่ | เวลา | เลขบัตร | ชื่อ ] เข้า Google Sheet เรียบร้อยแล้วครับ!");
             document.getElementById('citizenId').value = "";
             document.getElementById('fullName').value = "";
-            submitBtn.disabled = true;
+            submitBtn.disabled = false;
         })
         .catch(err => {
-            alert("เกิดข้อผิดพลาด: " + err);
+            alert("บันทึกผิดพลาด: " + err);
             submitBtn.disabled = false;
         });
     });
