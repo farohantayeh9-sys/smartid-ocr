@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartID Connect - Live OCR</title>
-    <!-- เรียกใช้งาน Tesseract.js เวอร์ชันสแกนสด -->
+    <title>SmartID Connect - Live OCR v2</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 15px; background-color: #f0f2f5; margin: 0; }
         .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); box-sizing: border-box; }
-        .video-container { position: relative; width: 100%; height: 260px; background: #000; border-radius: 8px; overflow: hidden; }
+        .video-container { position: relative; width: 100%; height: 300px; background: #000; border-radius: 8px; overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
-        .scan-overlay { position: absolute; top: 10%; left: 5%; width: 90%; height: 80%; border: 3px dashed #00b900; border-radius: 8px; box-sizing: border-box; pointer-events: none; display: flex; align-items: center; justify-content: center; }
-        .scan-overlay span { color: #00b900; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; }
-        .status-badge { background-color: #ff9800; color: white; padding: 10px; border-radius: 5px; font-weight: bold; margin: 10px 0; font-size: 15px; }
+        .scan-overlay { position: absolute; top: 15%; left: 5%; width: 90%; height: 70%; border: 3px dashed #00b900; border-radius: 8px; box-sizing: border-box; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+        .scan-overlay span { color: #00b900; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 4px; font-size: 13px; font-weight: bold; }
+        .status-badge { background-color: #00b900; color: white; padding: 10px; border-radius: 5px; font-weight: bold; margin: 10px 0; font-size: 15px; }
         input { width: 100%; padding: 10px; margin: 5px 0 15px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
         button { background-color: #007bff; color: white; border: none; padding: 14px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; }
         button:disabled { background-color: #ccc; color: #666; cursor: not-allowed; }
@@ -23,17 +22,16 @@
 <body>
 
 <div class="container">
-    <h2>SmartID Connect (Live OCR)</h2>
+    <h2>SmartID Connect (Live OCR v2)</h2>
     
-    <!-- หน้าจอแสดงผลสตรีมกล้องสดและกรอบเล็งบัตร -->
     <div class="video-container">
         <video id="video" autoplay playsinline muted></video>
         <div class="scan-overlay">
-            <span>วางหน้าบัตรประชาชนให้อยู่ในกรอบนี้</span>
+            <span>ขยับบัตรประชาชนเข้ามาให้เต็มกรอบและชัดที่สุด</span>
         </div>
     </div>
     
-    <div id="status" class="status-badge">🔄 กำลังเปิดใช้งานกล้องหลัง...</div>
+    <div id="status" class="status-badge">🔍 ถือบัตรนิ่งๆ ระบบกำลังสแกนอัตโนมัติ...</div>
     <canvas id="captureCanvas" style="display:none;"></canvas>
     
     <div class="result-box">
@@ -48,7 +46,7 @@
 </div>
 
 <script>
-    // ⚠️ นำลิงก์ Web App URL ตัวที่ลงท้ายด้วย /exec จากขั้นตอนที่ 1 มาวางใส่ตรงนี้ครับ
+    // ⚠️ อย่าลืมนำลิงก์ Web App URL ของอาจารย์มาใส่ตรงนี้เหมือนเดิมนะครับ
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxy7phmx-fo_asO48bWEZwF1tAfrOUABbb_gL5v3j8bajc_UN_WAIOemRZ6MJUq5EG2NA/exec"; 
 
     const video = document.getElementById('video');
@@ -58,61 +56,77 @@
     
     let isScanning = true;
     let scanInterval = null;
+    let worker = null;
 
-    // 1. เรียกเปิดกล้องหลังอัตโนมัติ
+    // เตรียมพร้อมโมเดล OCR ไว้ล่วงหน้าเพื่อความเร็วสูงสุด
+    async function initOCR() {
+        statusDiv.innerText = "⏳ กำลังโหลดสมองกล AI...";
+        statusDiv.style.backgroundColor = "#ff9800";
+        worker = await Tesseract.createWorker(['tha', 'eng']);
+        statusDiv.innerText = "🔍 พร้อมใช้งาน! ขยับบัตรเข้ามาใกล้ๆ กล้อง";
+        statusDiv.style.backgroundColor = "#00b900";
+        startCamera();
+    }
+
+    // เปิดกล้องหลังระดับความละเอียดสูงพิเศษ (HD 1080p)
     async function startCamera() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: "environment" }, width: 640, height: 480 },
+                video: { 
+                    facingMode: { ideal: "environment" },
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                },
                 audio: false
             });
             video.srcObject = stream;
-            statusDiv.innerText = "🔍 ถือบัตรนิ่งๆ ระบบกำลังสแกนอัตโนมัติ...";
-            statusDiv.style.backgroundColor = "#00b900";
             
-            // เริ่มต้นระบบลูปสแกนสดอัตโนมัติทุกๆ 2.5 วินาที
-            scanInterval = setInterval(captureAndRecognize, 2500);
+            // ลูปแอบสแกนอัตโนมัติถี่ขึ้นเป็นทุกๆ 1.5 วินาทีเพื่อความเร็ว
+            scanInterval = setInterval(captureAndRecognize, 1500);
         } catch (err) {
-            statusDiv.innerText = "❌ ไม่สามารถเข้าถึงกล้องหลังได้: " + err;
+            statusDiv.innerText = "❌ ไม่สามารถดึงความละเอียดกล้องได้: " + err;
             statusDiv.style.backgroundColor = "#dc3545";
         }
     }
 
-    // 2. ฟังก์ชันแอบแชะภาพจากสตรีมวิดีโอส่งไปให้ OCR ถอดรหัสเบื้องหลังแบบไม่ขัดจังหวะคนดู
+    // ฟังก์ชันประมวลผล OCR ความเร็วสูง
     async function captureAndRecognize() {
-        if (!isScanning) return;
+        if (!isScanning || !worker) return;
         
         const context = canvas.getContext('2d');
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
+        // ดึงความละเอียดภาพจริงจากกล้องมาประมวลผล (ภาพจะชัดกว่าบนหน้าจอมาก)
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         
         try {
-            // ส่งภาพบนแคนวาสให้ Tesseract แกะข้อความตัวอักษร
-            const { data: { text } } = await Tesseract.recognize(canvas, 'tha+eng');
+            const { data: { text } } = await worker.recognize(canvas);
             
-            // ตรวจหาเลข 13 หลักในรูปแบบมีขีด หรือติดกัน 13 ตัว
+            // ค้นหาแพทเทิร์นเลขบัตร 13 หลัก
             const idMatch = text.match(/[0-9]{1}-[0-9]{4}-[0-9]{5}-[0-9]{2}-[0-9]{1}/) || text.match(/[0-9]{13}/);
             
             if (idMatch && isScanning) {
                 const cleanedId = idMatch[0].replace(/-/g, "");
-                document.getElementById('citizenId').value = cleanedId;
-                document.getElementById('fullName').value = "สแกนสดสำเร็จ (ตรวจสอบชื่ออีกครั้ง)";
                 
-                // หยุดสแกนชั่วคราวเพื่อให้กดยืนยันข้อมูล
-                isScanning = false;
-                clearInterval(scanInterval);
-                
-                statusDiv.innerText = "🎉 สแกนพบข้อมูลบัตรเรียบร้อยแล้ว!";
-                statusDiv.style.backgroundColor = "#007bff";
-                submitBtn.disabled = false;
+                // คัดกรองเบื้องต้นว่าต้องมีความยาว 13 หลักจริง
+                if(cleanedId.length === 13) {
+                    document.getElementById('citizenId').value = cleanedId;
+                    document.getElementById('fullName').value = "ตรวจพบความสมบูรณ์ (ตรวจสอบชื่ออีกครั้ง)";
+                    
+                    isScanning = false;
+                    clearInterval(scanInterval);
+                    
+                    statusDiv.innerText = "🎉 สแกนพบข้อมูลสำเร็จ!";
+                    statusDiv.style.backgroundColor = "#007bff";
+                    submitBtn.disabled = false;
+                }
             }
         } catch (e) {
-            console.log("OCR Error, กำลังลองใหม่รอบถัดไป...", e);
+            console.log("OCR Error, กำลังลองใหม่...", e);
         }
     }
 
-    // 3. ฟังก์ชันยิงข้อมูลเข้า Google Sheet
+    // ส่งข้อมูลเข้า Google Sheet
     submitBtn.addEventListener('click', () => {
         submitBtn.innerText = "⏳ กำลังบันทึกลงฐานข้อมูล...";
         submitBtn.disabled = true;
@@ -120,19 +134,17 @@
         const id = document.getElementById('citizenId').value;
         const name = document.getElementById('fullName').value;
 
-        // ส่งข้อมูลไปยัง Google Apps Script โดยใช้ URL พารามิเตอร์เพื่อเลี่ยง CORS บล็อก
         fetch(`${WEB_APP_URL}?citizenId=${encodeURIComponent(id)}&fullName=${encodeURIComponent(name)}`, {
             method: 'POST'
         })
         .then(res => {
             alert("💾 บันทึกข้อมูลเข้า Google Sheet เรียบร้อยครับอาจารย์!");
-            // รีเซ็ตหน้าจอกลับมาเริ่มสแกนคนต่อไปใหม่ทันทีแบบวนลูป
             document.getElementById('citizenId').value = "";
             document.getElementById('fullName').value = "";
             isScanning = true;
-            statusDiv.innerText = "🔍 ถือบัตรนิ่งๆ ระบบกำลังสแกนอัตโนมัติ...";
+            statusDiv.innerText = "🔍 สแกนคนถัดไป ถือบัตรนิ่งๆ...";
             statusDiv.style.backgroundColor = "#00b900";
-            scanInterval = setInterval(captureAndRecognize, 2500);
+            scanInterval = setInterval(captureAndRecognize, 1500);
         })
         .catch(err => {
             alert("เกิดข้อผิดพลาด: " + err);
@@ -140,8 +152,7 @@
         });
     });
 
-    // เริ่มทำงานเมื่อเปิดหน้าเว็บ
-    window.addEventListener('load', startCamera);
+    window.addEventListener('load', initOCR);
 </script>
 
 </body>
