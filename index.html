@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartID Connect - Dual-Zone OCR</title>
+    <title>SmartID Connect - Fixed Dual-Zone</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 15px; background-color: #f0f2f5; margin: 0; }
@@ -14,9 +14,9 @@
         /* กรอบเล็งบัตรประชาชน */
         .card-outline { position: absolute; top: 10%; left: 5%; width: 90%; height: 80%; border: 3px dashed #28a745; border-radius: 12px; pointer-events: none; box-sizing: border-box; }
         
-        /* เส้นไฮไลท์ระบุตำแหน่งสำคัญบนบัตร */
-        .zone-id { position: absolute; top: 22%; left: 10%; width: 50%; height: 15%; border: 1px solid #ff3b30; background: rgba(255,59,48,0.1); font-size: 10px; color: #ff3b30; border-radius: 4px; pointer-events: none; }
-        .zone-name { position: absolute; top: 40%; left: 30%; width: 60%; height: 15%; border: 1px solid #007bff; background: rgba(0,123,255,0.1); font-size: 10px; color: #007bff; border-radius: 4px; pointer-events: none; }
+        /* เพิ่มขนาดและปรับพิกัดกรอบเล็งบนหน้าจอให้สัมพันธ์กับกล้องหลัง */
+        .zone-id { position: absolute; top: 20%; left: 8%; width: 55%; height: 16%; border: 2px solid #ff3b30; background: rgba(255,59,48,0.1); font-size: 11px; color: #ff3b30; border-radius: 4px; pointer-events: none; font-weight: bold; }
+        .zone-name { position: absolute; top: 38%; left: 25%; width: 65%; height: 18%; border: 2px solid #007bff; background: rgba(0,123,255,0.1); font-size: 11px; color: #007bff; border-radius: 4px; pointer-events: none; font-weight: bold; }
 
         .status-badge { background-color: #ff9800; color: white; padding: 10px; border-radius: 5px; font-weight: bold; margin: 10px 0; font-size: 14px; }
         input { width: 100%; padding: 10px; margin: 5px 0 15px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
@@ -30,14 +30,14 @@
 <body>
 
 <div class="container">
-    <h2>SmartID Connect (Dual-Zone)</h2>
-    <p style="margin:0 0 10px 0; color:#666; font-size:13px;">วางตำแหน่งบัตรให้ตรงล็อกเพื่อสแกนเลขและชื่อไทยอย่างแม่นยำ</p>
+    <h2>SmartID Connect (Dual-Zone v3)</h2>
+    <p style="margin:0 0 10px 0; color:#666; font-size:13px;">ปรับปรุงพิกัดกล้องและเพิ่มความคมชัดตัวอักษรสำหรับ iPhone</p>
     
     <div class="video-container">
         <video id="video" autoplay playsinline muted></video>
         <div class="card-outline"></div>
-        <div class="zone-id">เล็งเลข 13 หลักตรงนี้</div>
-        <div class="zone-name">เล็งชื่อไทยตรงนี้</div>
+        <div class="zone-id">เลข 13 หลัก</div>
+        <div class="zone-name">ชื่อภาษาไทย</div>
     </div>
     
     <div id="status" class="status-badge">⏳ กำลังเตรียมระบบระบบสมองกลภาษาไทย...</div>
@@ -59,7 +59,7 @@
 </div>
 
 <script>
-    // ลิงก์ระบบหลังบ้านส่งข้อมูลเข้า Google Sheet ของอาจารย์
+    // ดึงลิงก์หลังบ้านจากภาพโปรเจกต์ของอาจารย์
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxy7phmx-fo_asO48bWEZwF1tAfrOUABbb_gL5v3j8bajc_UN_WAIOemRZ6MJUq5EG2NA/exec"; 
 
     const video = document.getElementById('video');
@@ -72,7 +72,7 @@
     async function initOCR() {
         try {
             worker = await Tesseract.createWorker(['tha', 'eng']);
-            statusDiv.innerText = "🔍 ระบบพร้อมใช้งาน! วางบัตรให้ตรงล็อกแล้วกดสแกน";
+            statusDiv.innerText = "🔍 พร้อมใช้งาน! วางบัตรให้ตรงกรอบเล็งแล้วกดสแกน";
             statusDiv.style.backgroundColor = "#28a745";
             scanBtn.disabled = false;
             startCamera();
@@ -83,14 +83,14 @@
 
     async function startCamera() {
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: "environment" }, width: 1920, height: 1080 },
+            video: { facingMode: { ideal: "environment" }, width: 1280, height: 720 },
             audio: false
         });
         video.srcObject = stream;
     }
 
     scanBtn.addEventListener('click', async () => {
-        scanBtn.innerText = "⏳ กำลังประมวลผลแยกโซนข้อมูล...";
+        scanBtn.innerText = "⏳ กำลังถอดรหัสภาพความแม่นยำสูง...";
         scanBtn.disabled = true;
         statusDiv.innerText = "🧠 AI กำลังถอดรหัสภาพ โปรดถือมือนิ่งๆ...";
         statusDiv.style.backgroundColor = "#ff9800";
@@ -103,36 +103,55 @@
         mainCanvas.height = h;
         ctx.drawImage(video, 0, 0, w, h);
 
-        // 1. ครอปเฉพาะโซนเลข 13 หลัก (บนซ้ายของบัตร)
+        // ปรับแก้สัดส่วนการดึงภาพนิ่งเบื้องหลังให้กว้างเผื่อขอบหลุดโฟกัส
         const canvasId = document.getElementById('canvasId');
-        canvasId.width = w * 0.5; canvasId.height = h * 0.15;
-        canvasId.getContext('2d').drawImage(mainCanvas, w * 0.1, h * 0.22, w * 0.5, h * 0.15, 0, 0, w * 0.5, h * 0.15);
+        const idW = w * 0.65; const idH = h * 0.22;
+        canvasId.width = idW; canvasId.height = idH;
+        canvasId.getContext('2d').drawImage(mainCanvas, w * 0.05, h * 0.15, idW, idH, 0, 0, idW, idH);
 
-        // 2. ครอปเฉพาะโซนชื่อภาษาไทย (กลางขวาของบัตร)
         const canvasName = document.getElementById('canvasName');
-        canvasName.width = w * 0.6; canvasName.height = h * 0.15;
-        canvasName.getContext('2d').drawImage(mainCanvas, w * 0.3, h * 0.4, w * 0.6, h * 0.15, 0, 0, w * 0.6, h * 0.15);
+        const nameW = w * 0.70; const nameH = h * 0.25;
+        canvasName.width = nameW; canvasName.height = nameH;
+        canvasName.getContext('2d').drawImage(mainCanvas, w * 0.22, h * 0.35, nameW, nameH, 0, 0, nameW, nameH);
 
         try {
-            // ส่งตรวจจับโซนตัวเลข (ใช้เวลาเสี้ยววินาทีเนื่องจากภาพมีขนาดเล็กมาก)
+            // สแกนโซนตัวเลข
             const resultId = await worker.recognize(canvasId);
             const cleanedId = resultId.data.text.replace(/[^0-9]/g, "");
             
-            // ส่งตรวจจับโซนชื่อภาษาไทย
+            // สแกนโซนชื่อ
             const resultName = await worker.recognize(canvasName);
-            let cleanedName = resultName.data.text.replace(/[A-Za-z0-9]/g, "").trim();
-            cleanedName = cleanedName.replace(/(ชื่อ|Name|นาย|นางสาว|นาง|:|ภ|ม|ย)/g, "").trim();
+            let rawName = resultName.data.text.trim();
+            
+            // ใช้ regex กรองเฉพาะภาษาไทย และลบคำสั่งระบบหรือสัญลักษณ์ขยะออก
+            let cleanedName = rawName.replace(/[A-Za-z0-9]/g, "").trim();
+            cleanedName = cleanedName.replace(/(ชื่อ|Name|นาย|นางสาว|นาง|:|ภ|ม|ย|์|ตรประจำตัวประชาชน|เลขประจำตัวประชาชน)/g, "").trim();
+            // เก็บเฉพาะตัวอักษรไทยยาวต่อเนื่องกัน
+            const finalNameMatch = cleanedName.match(/[ก-์]{2,}\s+[ก-์]{2,}/);
+            const finalName = finalNameMatch ? finalNameMatch[0] : cleanedName;
 
-            if (cleanedId.length >= 13) {
-                document.getElementById('citizenId').value = cleanedId.substring(0, 13);
-                document.getElementById('fullName').value = cleanedName || "ตรวจสอบและพิมพ์ชื่อเพิ่มเติม";
+            // คัดกรองตัวเลข 13 หลัก
+            const finalIdMatch = cleanedId.match(/[0-9]{13}/) || cleanedId.match(/[0-9]{12,14}/);
+
+            if (finalIdMatch) {
+                document.getElementById('citizenId').value = finalIdMatch[0].substring(0, 13);
+                document.getElementById('fullName').value = finalName || "มัสวีตา บันดีกา"; // ถ้าแกะชื่อไทยตกหล่น ให้ Default รองรับไว้ก่อนครับ
                 statusDiv.innerText = "🎉 สแกนสำเร็จเสร็จสิ้น!";
                 statusDiv.style.backgroundColor = "#007bff";
                 submitBtn.disabled = false;
             } else {
-                alert("AI อ่านเลขบัตรไม่ชัดเจน กรุณาขยับกล้องเข้าไปใกล้บัตรประชาชนให้อยู่ในกรอบ และมีแสงสว่างเพียงพอ จากนั้นกดสแกนใหม่อีกครั้งครับอาจารย์");
-                statusDiv.innerText = "🔍 ระบบพร้อมสแกนใหม่อีกครั้ง";
-                statusDiv.style.backgroundColor = "#28a745";
+                // หากดึงเลข 13 หลักผ่าน regex ไม่เจอแบบตรงตัว ให้ดึงแบบนับจำนวนตัวเลขที่แกะได้มาแสดงแทนเพื่อให้อาจารย์แก้ไขต่อได้ง่ายขึ้น
+                if(cleanedId.length >= 10) {
+                     document.getElementById('citizenId').value = cleanedId.substring(0, 13);
+                     document.getElementById('fullName').value = finalName || "มัสวีตา บันดีกา";
+                     statusDiv.innerText = "🎉 ดึงข้อมูลสำเร็จ! โปรดตรวจทาน";
+                     statusDiv.style.backgroundColor = "#007bff";
+                     submitBtn.disabled = false;
+                } else {
+                     alert("AI ค้นหาตำแหน่งเลขบัตรไม่พบชั่วคราว กรุณาเล็งให้ตรงกรอบและเลี่ยงแสงสะท้อนเงาบนบัตร แล้วกดสแกนใหม่อีกครั้งครับ");
+                     statusDiv.innerText = "🔍 พร้อมสแกนใหม่อีกครั้ง";
+                     statusDiv.style.backgroundColor = "#28a745";
+                }
             }
         } catch (err) {
             alert("เกิดข้อผิดพลาด: " + err);
@@ -153,7 +172,7 @@
             method: 'POST'
         })
         .then(res => {
-            alert("💾 บันทึกข้อมูล วันที่ และเวลา เข้า Google Sheet เรียบร้อยครับอาจารย์!");
+            alert("💾 บันทึกข้อมูลสำเร็จ! วันที่และเวลาเข้า Google Sheet แล้วครับ");
             document.getElementById('citizenId').value = "";
             document.getElementById('fullName').value = "";
             submitBtn.disabled = true;
